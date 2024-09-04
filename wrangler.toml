@@ -1,0 +1,18 @@
+# Cloudflare pages requires a top level name attribute
+name = "audio-visual"
+# Cloudflare Pages will ignore wrangler.toml without this line
+pages_build_output_dir = "./build/client"
+# Fixes "no such module 'node:events'"
+compatibility_flags = ["nodejs_compat"]
+# Fixes "compatibility_flags cannot be specified without a compatibility_date"
+compatibility_date = "2024-09-04"
+
+[[d1_databases]]
+binding = "DB"                                       # i.e. available in your Worker on env.DB
+database_name = "audio-visual"
+database_id = "dc7054c6-77d0-498f-898d-1478e2a6449b"
+migrations_dir = "./app/db/migrations"
+
+[[r2_buckets]]
+binding = 'BUCKET'
+bucket_name = 'audio-visual'

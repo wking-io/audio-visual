@@ -4,5 +4,4 @@ node_modules
 /build
 .env
 
-# sst
-.sst
+.wrangler

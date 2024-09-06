@@ -200,68 +200,13 @@ function App() {
 			<div className="relative min-h-screen">
 				{hideMenu ? null : (
 					<header className="mx-auto flex max-w-6xl justify-between py-2 px-4">
-						<ContextMenu items={getLogoItems(theme)}>
-							<Link
-								to="/"
-								className="text-foreground/65 hover:text-foreground flex items-center gap-2 text-sm font-semibold"
-							>
-								<Icon name="logo" size="md" />
-								<span className="hidden md:inline-block">wking.dev</span>
-							</Link>
-						</ContextMenu>
+						<Link
+							to="/"
+							className="text-foreground/65 hover:text-foreground flex items-center gap-2 text-sm font-semibold"
+						>
+							<span className="hidden md:inline-block">audio-visual</span>
+						</Link>
 						<nav className="font-code flex text-xs">
-							<NavLink
-								to={generatePath('/:category', { category: 'guides' })}
-								className={({ isActive }) =>
-									clsx(
-										isActive
-											? 'text-foreground underline'
-											: 'text-foreground/65 hover:text-foreground hover:underline',
-										'p-2',
-									)
-								}
-							>
-								Guides
-							</NavLink>
-							<NavLink
-								to={generatePath('/:category', { category: 'demos' })}
-								className={({ isActive }) =>
-									clsx(
-										isActive
-											? 'text-foreground underline'
-											: 'text-foreground/65 hover:text-foreground hover:underline',
-										'p-2',
-									)
-								}
-							>
-								Demos
-							</NavLink>
-							<NavLink
-								to={generatePath('/:category', { category: 'logs' })}
-								className={({ isActive }) =>
-									clsx(
-										isActive
-											? 'text-foreground underline'
-											: 'text-foreground/65 hover:text-foreground hover:underline',
-										'p-2',
-									)
-								}
-							>
-								Logs
-							</NavLink>
-							<NavLink
-								to={generatePath('/:category', { category: 'tips' })}
-								className={({ isActive }) =>
-									clsx(
-										isActive
-											? 'text-foreground underline'
-											: 'text-foreground/65 hover:text-foreground hover:underline',
-										'p-2',
-									)
-								}
-							>
-								Tips
-							</NavLink>
 							<ThemeSwitch userPreference={requestInfo.userPrefs.theme} />
 							<Toaster
 								duration={400000}

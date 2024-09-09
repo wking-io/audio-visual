@@ -1,21 +1,14 @@
 import { type FileUpload, parseFormData } from '@mjackson/form-data-parser'
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare'
 import { drizzle } from 'drizzle-orm/d1'
-import {
-	EventHandler,
-	ReactEventHandler,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from 'react'
+import { type ReactEventHandler, useCallback, useEffect, useRef } from 'react'
 import { createNoise3D } from 'simplex-noise'
 import Form from '#app/components/kits/Form.js'
 import { recordings } from '#app/db/schema.server.js'
+import { useAudioAnalyser } from '#app/hooks/useAudioAnalyser.js'
+import { useRecordAudio } from '#app/hooks/useRecordAudio.js'
 import { R2FileStorage } from '#app/utils/file-storage.js'
 import { makeRecordingKey } from '#app/utils/make-recording-key.js'
-import { useRecordAudio } from '#app/hooks/useRecordAudio.js'
-import { useAudioAnalyser } from '#app/hooks/useAudioAnalyser.js'
 
 function uploadHandler(store: R2FileStorage, key: string) {
 	return async (fileUpload: FileUpload) => {
@@ -128,76 +121,100 @@ export default function Screen() {
 	}, [])
 
 	return (
-		<div className="flex flex-1 flex-col items-center justify-center gap-4">
-			<canvas ref={canvasRef} width={400} height={400} />
-			<div className="w-full max-w-sm">
-				{audioURL ? (
-					<div>
-						<audio
-							ref={playerRef}
-							onPlay={handlePlay}
-							onPause={handlePause}
-							controls
-							src={audioURL}
-							className="w-full"
-						></audio>
+		<>
+			<div>
+				<div className="relative mx-auto flex aspect-[5/7] w-full max-w-xl flex-col rounded-4xl bg-gradient-to-br from-amber-500 via-amber-500 to-amber-600">
+					<div className="relative p-4">
+						<div className="overflow-hidden rounded-2xl border-r-2 border-b-2 border-white/50">
+							<div className="inset-0 rounded-2xl border-t-2 border-l-2 border-gray-950/50" />
+							<div className="relative aspect-[7/5] w-full bg-gray-950 p-1">
+								<div className="h-full w-full rounded-xl border-2 border-gray-950/60 bg-white/10"></div>
+								<div className="absolute inset-1 rounded-xl border-t-4 border-l-4 border-t-amber-300/15 border-l-amber-300/15"></div>
+								<div className="absolute inset-[5px] rounded-xl border-t border-l border-t-amber-200/50 border-l-amber-200/50"></div>
+							</div>
+						</div>
 					</div>
-				) : (
-					<button
-						onClick={isRecording ? handleStop : handleStart}
-						className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full py-2 px-4 font-medium"
-					>
-						{isRecording ? (
-							<>
-								<span className="bg-background ring-background block h-3 w-3" />
-								Stop Recording
-							</>
-						) : (
-							<>
-								<span className="bg-red ring-red group-hover:ring-offset-foreground/80 ring-offset-foreground block h-2 w-2 rounded-full ring-1 ring-offset-2" />
-								Start Recording
-							</>
-						)}
-					</button>
-				)}
+					<div className="flex-1"></div>
+					<div className="relative rounded-t-sm border-t-2 border-gray-950/60">
+						<div className="rounded-t-sm border-t-2 border-white/40 p-4 font-mono">
+							<p>Audio Visualizer</p>
+						</div>
+					</div>
+					<div className="absolute inset-0 rounded-4xl border-r-2 border-b-2 border-white/20" />
+					<div className="absolute inset-0 rounded-4xl border-t-2 border-l-2 border-white/60" />
+				</div>
 			</div>
-			<Form
-				encType="multipart/form-data"
-				className="flex w-full max-w-sm flex-col gap-4"
-			>
-				<input
-					ref={fileInputRef}
-					type="file"
-					name="recording"
-					accept="audio/*"
-					onChange={handleFileChange}
-					className={audioURL ? 'sr-only' : ''}
-				/>
-				{audioURL ? (
-					<>
+			<div className="flex flex-1 flex-col items-center justify-center gap-4">
+				<canvas ref={canvasRef} width={400} height={400} />
+				<div className="w-full max-w-sm">
+					{audioURL ? (
+						<div>
+							<audio
+								ref={playerRef}
+								onPlay={handlePlay}
+								onPause={handlePause}
+								controls
+								src={audioURL}
+								className="w-full"
+							></audio>
+						</div>
+					) : (
 						<button
-							type="submit"
-							className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full border border-transparent py-2 px-4 font-medium"
+							onClick={isRecording ? handleStop : handleStart}
+							className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full py-2 px-4 font-medium"
 						>
-							Save and Make Magic
+							{isRecording ? (
+								<>
+									<span className="bg-background ring-background block h-3 w-3" />
+									Stop Recording
+								</>
+							) : (
+								<>
+									<span className="bg-red ring-red group-hover:ring-offset-foreground/80 ring-offset-foreground block h-2 w-2 rounded-full ring-1 ring-offset-2" />
+									Start Recording
+								</>
+							)}
 						</button>
-						<button
-							onClick={() => {
-								if (playerRef.current) {
-									playerRef.current.pause()
-									handlePause()
-								}
-								handleReset()
-							}}
-							type="button"
-							className="hover:bg-foreground/10 border-foreground group flex w-full items-center justify-center gap-2 rounded-full border bg-transparent py-2 px-4 font-medium"
-						>
-							Clear Audio
-						</button>
-					</>
-				) : null}
-			</Form>
-		</div>
+					)}
+				</div>
+				<Form
+					encType="multipart/form-data"
+					className="flex w-full max-w-sm flex-col gap-4"
+				>
+					<input
+						ref={fileInputRef}
+						type="file"
+						name="recording"
+						accept="audio/*"
+						onChange={handleFileChange}
+						className={audioURL ? 'sr-only' : ''}
+					/>
+					{audioURL ? (
+						<>
+							<button
+								type="submit"
+								className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full border border-transparent py-2 px-4 font-medium"
+							>
+								Save and Make Magic
+							</button>
+							<button
+								onClick={() => {
+									if (playerRef.current) {
+										playerRef.current.pause()
+										handlePause()
+									}
+									handleReset()
+								}}
+								type="button"
+								className="hover:bg-foreground/10 border-foreground group flex w-full items-center justify-center gap-2 rounded-full border bg-transparent py-2 px-4 font-medium"
+							>
+								Clear Audio
+							</button>
+						</>
+					) : null}
+				</Form>
+			</div>
+		</>
 	)
 }
 

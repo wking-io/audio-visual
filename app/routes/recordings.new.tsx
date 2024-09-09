@@ -1,14 +1,21 @@
 import { type FileUpload, parseFormData } from '@mjackson/form-data-parser'
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare'
 import { drizzle } from 'drizzle-orm/d1'
-import { useEffect, useRef, useState } from 'react'
+import {
+	EventHandler,
+	ReactEventHandler,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
+import { createNoise3D } from 'simplex-noise'
 import Form from '#app/components/kits/Form.js'
 import { recordings } from '#app/db/schema.server.js'
 import { R2FileStorage } from '#app/utils/file-storage.js'
 import { makeRecordingKey } from '#app/utils/make-recording-key.js'
-import { createNoise2D, createNoise3D } from 'simplex-noise'
-import clsx from 'clsx'
-import { BeakerIcon, PlusIcon, TrashIcon } from '@heroicons/react/20/solid'
+import { useRecordAudio } from '#app/hooks/useRecordAudio.js'
+import { useAudioAnalyser } from '#app/hooks/useAudioAnalyser.js'
 
 function uploadHandler(store: R2FileStorage, key: string) {
 	return async (fileUpload: FileUpload) => {
@@ -55,117 +62,60 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Screen() {
-	const [recording, setRecording] = useState(false)
-	const [audioURL, setAudioURL] = useState('')
-	const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-	const audioContextRef = useRef<AudioContext | null>(null)
-	const audioChunksRef = useRef<Blob[]>([])
-	const canvasRef = useRef<HTMLCanvasElement>(null)
-	const playerRef = useRef<HTMLAudioElement>(null)
-	const fileInputRef = useRef<HTMLInputElement>(null)
 	const orbStateRef = useRef<{
 		analyser: AnalyserNode | null
 		dataArray: Uint8Array | null
 		isActive: boolean
 	}>({ analyser: null, dataArray: null, isActive: false })
 
-	const handleStartRecording = async () => {
-		orbStateRef.current.isActive = true
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-		mediaRecorderRef.current = new MediaRecorder(stream)
+	const { handleSetup, handleSuspend, handleTearDown } = useAudioAnalyser({
+		onSetup(analyser) {
+			// Set analyser instance
+			orbStateRef.current.analyser = analyser
+			// Prepare data array for visualization
+			const bufferLength = analyser.frequencyBinCount
+			orbStateRef.current.dataArray = new Uint8Array(bufferLength)
+		},
+		onTearDown() {
+			orbStateRef.current.analyser = null
+			orbStateRef.current.dataArray = null
+		},
+	})
 
-		// Set up audio context and analyser for visualization
-		audioContextRef.current = new (window.AudioContext ||
-			window.webkitAudioContext)()
+	const {
+		isRecording,
+		fileInputRef,
+		audioURL,
+		handleStop,
+		handleStart,
+		handleFileChange,
+		handleReset,
+	} = useRecordAudio({
+		onStart(stream) {
+			orbStateRef.current.isActive = true
+			handleSetup(stream).catch(console.error)
+		},
+		onStop() {
+			orbStateRef.current.isActive = false
+			handleTearDown().catch(console.error)
+		},
+	})
 
-		const audioContext = audioContextRef.current
+	const canvasRef = useRef<HTMLCanvasElement>(null)
+	const playerRef = useRef<HTMLAudioElement>(null)
 
-		// Create an AnalyserNode
-		const analyser = audioContext.createAnalyser()
-		analyser.fftSize = 2048 // Set the FFT size for the analyser node
-		orbStateRef.current.analyser = analyser
+	const handlePlay: ReactEventHandler<HTMLAudioElement> = useCallback(
+		(e) => {
+			orbStateRef.current.isActive = true
+			handleSetup(e.currentTarget).catch(console.error)
+		},
+		[handleSetup],
+	)
 
-		// Create a MediaElementSource from the audio element
-		const source = audioContext.createMediaStreamSource(stream)
-		source.connect(analyser)
-		analyser.connect(audioContext.destination)
-
-		// Prepare data array for visualization
-		const bufferLength = analyser.frequencyBinCount
-		orbStateRef.current.dataArray = new Uint8Array(bufferLength)
-
-		mediaRecorderRef.current.ondataavailable = (event: BlobEvent) => {
-			audioChunksRef.current.push(event.data)
-		}
-
-		mediaRecorderRef.current.onstop = () => {
-			const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-			setAudioURL(URL.createObjectURL(audioBlob))
-
-			// Create a File object from the recorded Blob
-			const file = new File([audioBlob], 'recorded-audio.webm', {
-				type: 'audio/webm',
-			})
-
-			if (fileInputRef.current) {
-				const dataTransfer = new DataTransfer()
-				dataTransfer.items.add(file)
-				fileInputRef.current.files = dataTransfer.files // Set the file input to the recorded file
-			}
-		}
-
-		mediaRecorderRef.current.start()
-		setRecording(true)
-	}
-
-	const initializeAudioPlayer = () => {
-		// Create an AudioContext
-		audioContextRef.current = new (window.AudioContext ||
-			(window as any).webkitAudioContext)()
-		const audioContext = audioContextRef.current
-
-		if (!audioContext || !playerRef.current) return
-
-		// Create an AnalyserNode
-		const analyser = audioContext.createAnalyser()
-		analyser.fftSize = 2048 // Set the FFT size for the analyser node
-		orbStateRef.current.analyser = analyser
-
-		// Create a MediaElementSource from the audio element
-		const source = audioContext.createMediaElementSource(playerRef.current)
-		source.connect(analyser)
-		analyser.connect(audioContext.destination)
-
-		// Prepare data array for visualization
-		const bufferLength = analyser.frequencyBinCount
-		orbStateRef.current.dataArray = new Uint8Array(bufferLength)
-
-		// Start drawing
-		draw()
-		audioContextRef.current.resume().catch(console.error)
-	}
-
-	const draw = () => {}
-
-	const handleStopRecording = async () => {
+	const handlePause = useCallback(() => {
 		orbStateRef.current.isActive = false
-		mediaRecorderRef.current?.stop()
-		mediaRecorderRef.current = null
-
-		await audioContextRef.current?.close()
-		audioContextRef.current = null
-
-		setRecording(false)
-	}
-
-	// Handle file input change
-	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0]
-		if (file) {
-			const fileURL = URL.createObjectURL(file)
-			setAudioURL(fileURL)
-		}
-	}
+		handleSuspend().catch(console.error)
+	}, [handleSetup])
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -179,23 +129,14 @@ export default function Screen() {
 
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center gap-4">
-			<canvas ref={canvasRef} width={600} height={600} />
+			<canvas ref={canvasRef} width={400} height={400} />
 			<div className="w-full max-w-sm">
 				{audioURL ? (
 					<div>
 						<audio
 							ref={playerRef}
-							onPlay={() => {
-								orbStateRef.current.isActive = true
-								if (audioContextRef.current) {
-									audioContextRef.current.resume().catch(console.error)
-								} else {
-									initializeAudioPlayer()
-								}
-							}}
-							onPause={() => {
-								orbStateRef.current.isActive = false
-							}}
+							onPlay={handlePlay}
+							onPause={handlePause}
 							controls
 							src={audioURL}
 							className="w-full"
@@ -203,10 +144,10 @@ export default function Screen() {
 					</div>
 				) : (
 					<button
-						onClick={recording ? handleStopRecording : handleStartRecording}
+						onClick={isRecording ? handleStop : handleStart}
 						className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full py-2 px-4 font-medium"
 					>
-						{recording ? (
+						{isRecording ? (
 							<>
 								<span className="bg-background ring-background block h-3 w-3" />
 								Stop Recording
@@ -241,6 +182,13 @@ export default function Screen() {
 							Save and Make Magic
 						</button>
 						<button
+							onClick={() => {
+								if (playerRef.current) {
+									playerRef.current.pause()
+									handlePause()
+								}
+								handleReset()
+							}}
 							type="button"
 							className="hover:bg-foreground/10 border-foreground group flex w-full items-center justify-center gap-2 rounded-full border bg-transparent py-2 px-4 font-medium"
 						>
@@ -308,8 +256,9 @@ function orb({
 	/* ====================== */
 	/* Some of those constants may change if the user resizes their screen but I still strongly believe they belong to the Constants part of the variables */
 	const DOTS_AMOUNT = 1000 // Amount of dots on the screen
-	const DOT_RADIUS = 4 // Radius of the dots
-	const MIN_GLOBE_RADIUS = width * 0.01 // Minimum radius of the globe
+	const MIN_DOT_RADIUS = 1
+	const MAX_DOT_RADIUS = 2 // Radius of the dots
+	const MIN_GLOBE_RADIUS = width * 0.1 // Minimum radius of the globe
 	const MAX_GLOBE_RADIUS = width * 0.5 // Maximum radius of the globe
 	let currentRadius = MIN_GLOBE_RADIUS // Current radius to be interpolated
 	const GLOBE_CENTER_Z = -MAX_GLOBE_RADIUS // Z value of the globe center
@@ -332,11 +281,14 @@ function orb({
 	}
 
 	// Draw the dot on the canvas
-	function draw(dot: Dot, options: { sin: number; cos: number }): void {
+	function draw(
+		dot: Dot,
+		options: { sin: number; cos: number; radius: number },
+	): void {
 		const { x, y, size } = project(dot, options)
 
 		ctx.beginPath()
-		ctx.arc(x, y, DOT_RADIUS * size, 0, Math.PI * 2)
+		ctx.arc(x, y, options.radius * size, 0, Math.PI * 2)
 		ctx.closePath()
 		ctx.fillStyle = `rgba(255, 255, 255, ${size})`
 		ctx.fill()
@@ -415,6 +367,7 @@ function orb({
 			draw(dot, {
 				sin: sineRotation,
 				cos: cosineRotation,
+				radius: isActive ? MAX_DOT_RADIUS : MIN_DOT_RADIUS,
 			})
 		})
 		window.requestAnimationFrame(render)

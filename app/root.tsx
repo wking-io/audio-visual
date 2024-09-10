@@ -134,7 +134,7 @@ function Document({
 				)}
 				<Links />
 			</head>
-			<body className="bg-background text-foreground font-display">
+			<body className="text-foreground font-display bg-gray-500">
 				{children}
 				<script
 					dangerouslySetInnerHTML={{
@@ -202,7 +202,7 @@ function App() {
 					<header className="mx-auto flex max-w-6xl justify-between py-2 px-4">
 						<Link
 							to="/"
-							className="text-foreground/65 hover:text-foreground flex items-center gap-2 text-sm font-semibold"
+							className="text-foreground/65 hover:text-foreground flex items-center gap-2 font-mono text-sm"
 						>
 							<span className="hidden md:inline-block">audio-visual</span>
 						</Link>

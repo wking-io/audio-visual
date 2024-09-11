@@ -1,5 +1,14 @@
 import { useRef, useState } from 'react'
 
+export const audioTrackConstraints: MediaTrackConstraints = {
+	echoCancellation: { exact: false },
+	autoGainControl: { exact: false },
+	noiseSuppression: { exact: false },
+	sampleRate: { ideal: 48000, min: 44100 }, // High sample rate: 48 kHz or fallback to 44.1 kHz
+	sampleSize: { ideal: 24, min: 16 }, // High sample size: 24-bit or fallback to 16-bit
+	channelCount: { ideal: 2, min: 1 }, // Stereo (2 channels)
+}
+
 export function useRecordAudio({
 	onStop,
 	onStart,
@@ -14,7 +23,9 @@ export function useRecordAudio({
 
 	async function handleStart() {
 		setIsRecording(true)
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+		const stream = await navigator.mediaDevices.getUserMedia({
+			audio: audioTrackConstraints,
+		})
 		const audioChunks: Blob[] = []
 		mediaRecorderRef.current = new MediaRecorder(stream)
 

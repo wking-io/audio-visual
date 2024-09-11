@@ -2127,3 +2127,50 @@ html.dark .shiki span {
 		color-mix(in srgb, var(--color-white) 15%, transparent)
 	);
 }
+
+.switch-inset {
+	background-image: radial-gradient(
+		ellipse 32px 8px at bottom right,
+		var(--color-gray-700) 60%,
+		var(--color-gray-950)
+	);
+}
+
+.switch-body {
+	background-image: linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-gray-950) 90%, transparent),
+			color-mix(in srgb, var(--color-gray-950) 0%, transparent) 40%
+		),
+		linear-gradient(
+			to top,
+			color-mix(in srgb, var(--color-orange-700) 0%, transparent),
+			color-mix(in srgb, var(--color-orange-700) 100%, transparent) 40%
+		),
+		linear-gradient(
+			to right,
+			var(--color-orange-600),
+			var(--color-orange-500) 5%,
+			var(--color-orange-600) 20%,
+			var(--color-orange-600) 70%,
+			var(--color-orange-700) 80%,
+			var(--color-orange-800) 95%
+		);
+}
+
+.switch-face {
+	background-image: radial-gradient(
+			ellipse 100% 100%,
+			color-mix(in srgb, var(--color-orange-600) 0%, transparent),
+			color-mix(in srgb, var(--color-orange-600) 30%, transparent) 50%,
+			color-mix(in srgb, var(--color-orange-600) 100%, transparent)
+		),
+		linear-gradient(
+			to top,
+			var(--color-orange-600),
+			var(--color-orange-600),
+			var(--color-orange-400) 70%,
+			var(--color-orange-700),
+			var(--color-orange-800)
+		);
+}

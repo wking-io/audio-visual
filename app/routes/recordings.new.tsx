@@ -174,6 +174,7 @@ export default function Screen() {
 											ref={playerRef}
 											onPlay={handlePlay}
 											onPause={handlePause}
+											onEnded={handlePause}
 											controls
 											src={audioURL}
 											className="w-full"
@@ -258,14 +259,32 @@ export default function Screen() {
 					<div className="pointer-events-none absolute inset-0 rounded-4xl border-r-2 border-b-2 border-white/20" />
 					<div className="pointer-events-none absolute inset-0 rounded-4xl border-t-2 border-l-2 border-white/60" />
 				</div>
-				<div className="pointer-events-none absolute top-full right-px left-px z-[-1] mx-auto h-9 max-w-md -translate-y-8 overflow-hidden rounded-t-none rounded-b-4xl bg-gradient-to-r from-gray-950 via-gray-800 via-10% to-gray-950">
+				<div className="pointer-events-none absolute top-full right-px left-px z-[-1] mx-auto h-9 max-w-md -translate-y-8 overflow-hidden rounded-t-none rounded-b-4xl bg-gradient-to-r from-gray-700 via-gray-600 via-10% to-gray-700">
 					<div className="absolute inset-0 mix-blend-multiply filter-[url(#noise)]" />
 				</div>
 				<div className="pointer-events-none absolute top-full right-px left-px z-[-2] h-9 max-w-md -translate-y-[31px] overflow-hidden rounded-t-none rounded-b-4xl bg-gradient-to-r from-white/10 via-white/80 via-10% to-white/10 to-50%">
 					<div className="absolute inset-0 mix-blend-multiply filter-[url(#noise)]" />
 				</div>
-				<div className="bg-device-bottom absolute top-full right-0 left-0 z-[-3] mx-auto h-[60px] max-w-md -translate-y-8 overflow-hidden rounded-t-none rounded-b-4xl bg-gray-500">
+				<div className="bg-device-bottom absolute top-full right-0 left-0 z-[-3] mx-auto h-[60px] max-w-md -translate-y-8 overflow-hidden rounded-t-none rounded-b-4xl border-b border-white/50 bg-gray-500">
 					<div className="absolute inset-0 mix-blend-multiply filter-[url(#noise)]" />
+					<div className="absolute right-[47px] bottom-[7px] h-[9px] w-[26px] rounded-full bg-gradient-to-t from-white/70 via-white/20 via-20% to-white/0" />
+					<button
+						onClick={() => setIsOn((prev) => !prev)}
+						className="switch-inset absolute right-12 bottom-2 h-2 w-8 cursor-grab rounded bg-gray-700 active:cursor-grabbing"
+					>
+						<span className="absolute inset-x-0 top-0 h-4 overflow-hidden rounded-t">
+							<span
+								className={clsx(
+									isOn ? 'translate-x-3' : 'translate-x-0',
+									'switch-body absolute top-0 left-px h-3 w-4 rounded-b-sm bg-orange-600 transition',
+								)}
+							>
+								<span className="switch-face absolute inset-x-0 bottom-0 h-2 rounded-sm border-b border-white/50 bg-orange-600" />
+							</span>
+						</span>
+						<span className="absolute -inset-2" />
+						<span className="sr-only">{isOn ? 'Turn off' : 'Turn on'}</span>
+					</button>
 				</div>
 				<div className="absolute inset-x-0 top-full z-[-4] h-6 translate-y-[460%] rounded-[50%] bg-gray-950/40 blur-lg" />
 				<div className="absolute -inset-x-16 top-full z-[-4] h-16 translate-y-[160%] rounded-[50%] bg-gray-950/40 blur-2xl" />
@@ -330,11 +349,13 @@ function orb({
 	/* Some of those constants may change if the user resizes their screen but I still strongly believe they belong to the Constants part of the variables */
 	const DOTS_AMOUNT = 1500 // Amount of dots on the screen
 	const MIN_DOT_RADIUS = 1
-	const MAX_DOT_RADIUS = 1.5 // Radius of the dots
-	const MIN_GLOBE_RADIUS = height * 0.15 // Minimum radius of the globe
-	const MAX_GLOBE_RADIUS = height * 0.5 // Maximum radius of the globe
+	const MAX_DOT_RADIUS = 1.25 // Radius of the dots
+	const INACTIVE_GLOBE_RADIUS = height * 0.15 // Minimum radius of the globe
+	const ACTIVE_GLOBE_RADIUS = height * 0.5 // Maximum radius of the globe
+	const MIN_GLOBE_RADIUS = height * 0.4
+	const MAX_GLOBE_RADIUS = height * 0.6
 	let currentRadius = MIN_GLOBE_RADIUS // Current radius to be interpolated
-	const GLOBE_CENTER_Z = -MAX_GLOBE_RADIUS // Z value of the globe center
+	const GLOBE_CENTER_Z = -ACTIVE_GLOBE_RADIUS // Z value of the globe center
 	let PROJECTION_CENTER_X = width / 2 // X center of the canvas HTML
 	let PROJECTION_CENTER_Y = height / 2 // Y center of the canvas HTML
 	let FIELD_OF_VIEW = height * 0.8
@@ -396,7 +417,7 @@ function orb({
 		const { analyser, dataArray, isActive } = getState()
 
 		const smoothness = 4
-		const targetRadius = isActive ? MAX_GLOBE_RADIUS : MIN_GLOBE_RADIUS
+		const targetRadius = isActive ? ACTIVE_GLOBE_RADIUS : INACTIVE_GLOBE_RADIUS
 		currentRadius += (targetRadius - currentRadius) / smoothness // Smooth transition
 
 		// Increase the globe rotation
@@ -416,8 +437,10 @@ function orb({
 				dataArray.reduce((a, b) => a + b) / analyser.frequencyBinCount
 
 			// Determine the noise-based intensity from the audio data
-			noiseFactor = avgFrequency / 40 // Normalize avgFrequency to a range of around [0, 2]
+			noiseFactor = avgFrequency / 80 // Normalize avgFrequency to a range of around [0, 2]
 		}
+
+		const noiseRange = MAX_GLOBE_RADIUS - MIN_GLOBE_RADIUS
 
 		// Loop through the dots array and draw every dot
 		dots.forEach((dot) => {
@@ -427,10 +450,17 @@ function orb({
 				dot.location.y / 80,
 				time * 0.001,
 			)
-			const audioInfluence = noiseFactor * currentRadius
 
 			// Update dot's position using the audio-influenced radius
-			const animatedRadius = currentRadius + noiseValue * audioInfluence
+			const animatedRadius = isActive
+				? Math.min(
+						Math.max(
+							currentRadius + noiseValue * noiseRange * noiseFactor,
+							MIN_GLOBE_RADIUS,
+						),
+						MAX_GLOBE_RADIUS,
+					)
+				: currentRadius
 
 			// Update dot's position using the animated radius
 			dot.location.x = animatedRadius * Math.sin(dot.phi) * Math.cos(dot.theta)

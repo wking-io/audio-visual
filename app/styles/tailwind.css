@@ -2091,15 +2091,15 @@ html.dark .shiki span {
 		),
 		linear-gradient(
 			to top,
-			color-mix(in srgb, var(--color-white) 20%, transparent),
-			color-mix(in srgb, var(--color-white) 5%, transparent) 15%,
-			color-mix(in srgb, var(--color-white) 0%, transparent)
+			color-mix(in srgb, var(--color-gray-50) 20%, transparent),
+			color-mix(in srgb, var(--color-gray-50) 5%, transparent) 15%,
+			color-mix(in srgb, var(--color-gray-50) 0%, transparent)
 		),
 		linear-gradient(
 			25deg,
-			color-mix(in srgb, var(--color-white) 35%, transparent),
-			color-mix(in srgb, var(--color-white) 5%, transparent) 15%,
-			color-mix(in srgb, var(--color-white) 0%, transparent)
+			color-mix(in srgb, var(--color-gray-50) 35%, transparent),
+			color-mix(in srgb, var(--color-gray-50) 5%, transparent) 15%,
+			color-mix(in srgb, var(--color-gray-50) 0%, transparent)
 		);
 }
 

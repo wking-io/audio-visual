@@ -3,6 +3,7 @@ import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare'
 import clsx from 'clsx'
 import { drizzle } from 'drizzle-orm/d1'
 import {
+	Fragment,
 	type ReactEventHandler,
 	useCallback,
 	useEffect,
@@ -20,6 +21,7 @@ import {
 	AdjustmentsHorizontalIcon,
 	ArrowPathIcon,
 } from '@heroicons/react/20/solid'
+import { Transition } from '@headlessui/react'
 
 function uploadHandler(store: R2FileStorage, key: string) {
 	return async (fileUpload: FileUpload) => {
@@ -66,12 +68,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Screen() {
+	const mode = 'recording'
 	const orbStateRef = useRef<{
 		analyser: AnalyserNode | null
 		dataArray: Uint8Array | null
 		isActive: boolean
 	}>({ analyser: null, dataArray: null, isActive: false })
-	const [isOn, setIsOn] = useState(true)
+	const [isOn, setIsOn] = useState(false)
 	const [audioPlaying, setAudioPlaying] = useState(false)
 
 	const { handleSetup, handleSuspend, handleTearDown } = useAudioAnalyser({
@@ -171,43 +174,96 @@ export default function Screen() {
 						<div className="absolute -top-0.5 right-0 bottom-0 -left-0.5 rounded-[18px] bg-gradient-to-br from-gray-950/30 to-gray-950/0" />
 						<div className="relative overflow-hidden rounded-2xl">
 							<div className="relative aspect-[7/5] w-full bg-gray-950 p-0.5">
-								<div className="bg-glare absolute inset-0 rounded-[18px]" />
-								<div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-gray-950/60 bg-white/5">
-									<canvas ref={canvasRef} width={300} height={300} />
-								</div>
-								{/* Bottom status bar */}
-								<div className="absolute inset-x-[5px] bottom-0 flex gap-4 border-t border-dashed border-gray-100/60 py-2 px-3 font-mono text-[10px] text-gray-100/80">
-									{audioURL ? (
-										<>
-											<p className="inline-flex items-center gap-1.5">
-												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
-													<CircleSymbol className="h-2 w-2 text-gray-800" />
-												</span>{' '}
-												To {audioPlaying ? 'Pause' : 'Play'} Recording
-											</p>
-											<p className="inline-flex items-center gap-1.5">
-												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
-													<XSymbol className="h-2 w-2 text-gray-800" />
-												</span>{' '}
-												To Delete Recording
-											</p>
-										</>
-									) : (
-										<>
-											<p className="inline-flex items-center gap-1.5">
-												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
-													<CircleSymbol className="h-2 w-2 text-gray-800" />
-												</span>{' '}
-												To Start Recording
-											</p>
-											<p className="inline-flex items-center gap-1.5">
-												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
-													<XSymbol className="h-2 w-2 text-gray-800" />
-												</span>{' '}
-												To Stop Recording
-											</p>
-										</>
+								<div className="bg-glare absolute inset-0 z-50 rounded-[18px]" />
+								<div
+									className={clsx(
+										isOn ? 'scale-y-100' : 'scale-y-0 delay-100',
+										'bg-white/5 transition duration-200',
 									)}
+								>
+									<div
+										className={clsx(
+											isOn ? 'opacity-100 delay-100' : 'opacity-0',
+											'transition duration-200',
+										)}
+									>
+										<div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-gray-950/60">
+											<canvas ref={canvasRef} width={300} height={300} />
+										</div>
+										{/* Top status bar */}
+										<div className="absolute inset-x-1 top-1 flex justify-between gap-4 overflow-hidden rounded-t-[10px] border-b border-dashed border-gray-100/60 font-mono text-[10px] text-gray-100/80">
+											<div className="flex">
+												<p
+													className={clsx(
+														mode === 'recording'
+															? 'border-transparent bg-gray-100/60 text-gray-950'
+															: 'border-gray-100/60',
+														'border-r py-2 px-3',
+													)}
+												>
+													Record
+												</p>
+												<p
+													className={clsx(
+														mode === 'generating'
+															? 'border-transparent bg-gray-100/60 text-gray-950'
+															: 'border-gray-100/60',
+														'border-r py-2 px-3',
+													)}
+												>
+													Generate
+												</p>
+											</div>
+											<div className="flex items-center gap-2 px-3">
+												<p className="inline-flex items-center gap-1.5">
+													<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+														<RefreshSymbol className="h-auto w-2 text-gray-800" />
+													</span>
+													Mode
+												</p>
+												<p className="inline-flex items-center gap-1.5">
+													<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+														<SettingsSymbol className="h-auto w-2 text-gray-800" />
+													</span>
+													Menu
+												</p>
+											</div>
+										</div>
+										{/* Bottom status bar */}
+										<div className="absolute inset-x-1 bottom-1 flex gap-4 rounded-b-[11px] border-t border-dashed border-gray-100/60 py-2 px-3 font-mono text-[10px] text-gray-100/80">
+											{audioURL ? (
+												<>
+													<p className="inline-flex items-center gap-1.5">
+														<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+															<CircleSymbol className="h-2 w-2 text-gray-800" />
+														</span>{' '}
+														{audioPlaying ? 'Pause' : 'Play'} Recording
+													</p>
+													<p className="inline-flex items-center gap-1.5">
+														<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+															<XSymbol className="h-2 w-2 text-gray-800" />
+														</span>{' '}
+														Delete Recording
+													</p>
+												</>
+											) : (
+												<>
+													<p className="inline-flex items-center gap-1.5">
+														<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+															<CircleSymbol className="h-2 w-2 text-gray-800" />
+														</span>
+														Start Recording
+													</p>
+													<p className="inline-flex items-center gap-1.5">
+														<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+															<XSymbol className="h-2 w-2 text-gray-800" />
+														</span>
+														Stop Recording
+													</p>
+												</>
+											)}
+										</div>
+									</div>
 								</div>
 								<div className="absolute inset-1 rounded-xl border-t-4 border-l-4 border-t-gray-300/15 border-l-gray-300/15"></div>
 								<div className="absolute inset-[5px] rounded-xl border-t border-l border-t-gray-200/50 border-l-gray-200/50"></div>
@@ -217,13 +273,13 @@ export default function Screen() {
 					<div className="relative flex flex-1 justify-between pb-4">
 						<div className="flex flex-col justify-between px-4">
 							<button className="group relative flex h-6 w-6 cursor-pointer items-center justify-center gap-2 rounded-full border-t border-l border-white/60 bg-transparent from-gray-950/10 to-gray-950/0 font-mono text-sm font-medium text-gray-950/70 ring ring-gray-950 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:border-gray-950/30 active:bg-gradient-to-br">
-								<ArrowPathIcon className="h-3 w-3" />
+								<RefreshSymbol className="h-auto w-2.5" />
 							</button>
 							<button
 								onClick={audioURL ? handleReset : handleStop}
 								className="group relative flex h-6 w-6 cursor-pointer items-center justify-center gap-2 rounded-full border-t border-l border-white/60 bg-transparent from-gray-950/10 to-gray-950/0 font-mono text-sm font-medium text-gray-950/70 ring ring-gray-950 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:border-gray-950/30 active:bg-gradient-to-br"
 							>
-								<AdjustmentsHorizontalIcon className="h-3 w-3" />
+								<SettingsSymbol className="h-auto w-2.5" />
 							</button>
 						</div>
 						<div className="flex items-center justify-end gap-4 pr-12">
@@ -284,7 +340,7 @@ export default function Screen() {
 								<div className="absolute inset-0 z-[-1] translate-1 bg-gray-950/30 blur-sm peer-active:bg-gray-950/20" />
 							</div>
 						</div>
-						<div className="absolute top-2 left-12 h-28 w-28">
+						<div className="absolute top-0 left-12 h-32 w-32">
 							<div className="absolute -inset-px rounded-full bg-gradient-to-br from-gray-600 to-white" />
 							<div className="absolute -inset-px rounded-full bg-gradient-to-br from-orange-700/50 via-gray-600/20 to-white" />
 							<div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-200" />
@@ -351,8 +407,8 @@ export default function Screen() {
 							) : null}
 						</Form>
 					</div>
-					<div className="relative rounded-t-sm border-t-2 border-gray-950/60">
-						<div className="flex items-center justify-between rounded-t-sm border-t-2 border-white/40 font-mono">
+					<div className="relative rounded-t-sm border-t border-gray-950/60">
+						<div className="flex items-center justify-between rounded-t-sm border-t border-gray-300 font-mono">
 							<svg
 								width="440"
 								height="48"
@@ -524,8 +580,8 @@ function orb({
 	const MAX_DOT_RADIUS = 1.25 // Radius of the dots
 	const INACTIVE_GLOBE_RADIUS = height * 0.15 // Minimum radius of the globe
 	const ACTIVE_GLOBE_RADIUS = height * 0.5 // Maximum radius of the globe
-	const MIN_GLOBE_RADIUS = height * 0.4
-	const MAX_GLOBE_RADIUS = height * 0.6
+	const MIN_GLOBE_RADIUS = height * 0.35
+	const MAX_GLOBE_RADIUS = height * 0.65
 	let currentRadius = MIN_GLOBE_RADIUS // Current radius to be interpolated
 	const GLOBE_CENTER_Z = -ACTIVE_GLOBE_RADIUS // Z value of the globe center
 	let PROJECTION_CENTER_X = width / 2 // X center of the canvas HTML
@@ -693,6 +749,46 @@ function XSymbol({ className }: { className?: string }) {
 				fillRule="evenodd"
 				clipRule="evenodd"
 				d="M0 0H1V1H0V0ZM2 2H1V1H2V2ZM3 3H2V2H3V3ZM5 3H4H3V4V5H2V6H1V7H0V8H1V7H2V6H3V5H4H5V6H6V7H7V8H8V7H7V6H6V5H5V4V3ZM6 2V3H5V2H6ZM7 1V2H6V1H7ZM7 1V0H8V1H7Z"
+				fill="currentColor"
+			/>
+		</svg>
+	)
+}
+
+function RefreshSymbol({ className }: { className?: string }) {
+	return (
+		<svg
+			width="6"
+			height="8"
+			viewBox="0 0 6 8"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className={className}
+		>
+			<path
+				fill-rule="evenodd"
+				clip-rule="evenodd"
+				d="M2 0H3V1H2V0ZM3 2V1H4V2H3ZM1 3V2H2H3V3H2H1ZM1 3V4V5H0V4V3H1ZM5 3H6V4V5H5V4V3ZM3 6V5H4H5V6H4H3ZM3 7V6H2V7H3ZM3 7V8H4V7H3Z"
+				fill="currentColor"
+			/>
+		</svg>
+	)
+}
+
+function SettingsSymbol({ className }: { className?: string }) {
+	return (
+		<svg
+			width="8"
+			height="7"
+			viewBox="0 0 8 7"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className={className}
+		>
+			<path
+				fill-rule="evenodd"
+				clip-rule="evenodd"
+				d="M1 0H2H3V1H4H5H6H7H8V2H7H6H5H4H3V3H2H1V2H2V1H1V0ZM1 1V2H0V1H1ZM5 4H6H7V5H6V6H7V7H6H5V6H4H3H2H1H0V5H1H2H3H4H5V4ZM7 6H8V5H7V6Z"
 				fill="currentColor"
 			/>
 		</svg>

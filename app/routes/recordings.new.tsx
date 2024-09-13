@@ -16,6 +16,10 @@ import { useAudioAnalyser } from '#app/hooks/useAudioAnalyser.js'
 import { useRecordAudio } from '#app/hooks/useRecordAudio.js'
 import { R2FileStorage } from '#app/utils/file-storage.js'
 import { makeRecordingKey } from '#app/utils/make-recording-key.js'
+import {
+	AdjustmentsHorizontalIcon,
+	ArrowPathIcon,
+} from '@heroicons/react/20/solid'
 
 function uploadHandler(store: R2FileStorage, key: string) {
 	return async (fileUpload: FileUpload) => {
@@ -68,6 +72,7 @@ export default function Screen() {
 		isActive: boolean
 	}>({ analyser: null, dataArray: null, isActive: false })
 	const [isOn, setIsOn] = useState(true)
+	const [audioPlaying, setAudioPlaying] = useState(false)
 
 	const { handleSetup, handleSuspend, handleTearDown } = useAudioAnalyser({
 		onSetup(analyser) {
@@ -105,9 +110,18 @@ export default function Screen() {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const playerRef = useRef<HTMLAudioElement>(null)
 
+	const playAudio = useCallback(() => {
+		playerRef?.current?.play().catch(console.error)
+	}, [])
+
+	const pauseAudio = useCallback(() => {
+		playerRef?.current?.pause()
+	}, [])
+
 	const handlePlay: ReactEventHandler<HTMLAudioElement> = useCallback(
 		(e) => {
 			orbStateRef.current.isActive = true
+			setAudioPlaying(true)
 			handleSetup(e.currentTarget).catch(console.error)
 		},
 		[handleSetup],
@@ -115,6 +129,7 @@ export default function Screen() {
 
 	const handlePause = useCallback(() => {
 		orbStateRef.current.isActive = false
+		setAudioPlaying(false)
 		handleSuspend().catch(console.error)
 	}, [handleSetup])
 
@@ -160,100 +175,230 @@ export default function Screen() {
 								<div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-gray-950/60 bg-white/5">
 									<canvas ref={canvasRef} width={300} height={300} />
 								</div>
+								{/* Bottom status bar */}
+								<div className="absolute inset-x-[5px] bottom-0 flex gap-4 border-t border-dashed border-gray-100/60 py-2 px-3 font-mono text-[10px] text-gray-100/80">
+									{audioURL ? (
+										<>
+											<p className="inline-flex items-center gap-1.5">
+												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+													<CircleSymbol className="h-2 w-2 text-gray-800" />
+												</span>{' '}
+												To {audioPlaying ? 'Pause' : 'Play'} Recording
+											</p>
+											<p className="inline-flex items-center gap-1.5">
+												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+													<XSymbol className="h-2 w-2 text-gray-800" />
+												</span>{' '}
+												To Delete Recording
+											</p>
+										</>
+									) : (
+										<>
+											<p className="inline-flex items-center gap-1.5">
+												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+													<CircleSymbol className="h-2 w-2 text-gray-800" />
+												</span>{' '}
+												To Start Recording
+											</p>
+											<p className="inline-flex items-center gap-1.5">
+												<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-gray-100/60">
+													<XSymbol className="h-2 w-2 text-gray-800" />
+												</span>{' '}
+												To Stop Recording
+											</p>
+										</>
+									)}
+								</div>
 								<div className="absolute inset-1 rounded-xl border-t-4 border-l-4 border-t-gray-300/15 border-l-gray-300/15"></div>
 								<div className="absolute inset-[5px] rounded-xl border-t border-l border-t-gray-200/50 border-l-gray-200/50"></div>
 							</div>
 						</div>
 					</div>
-					<div className="flex-1">
-						<div className="flex flex-1 flex-col items-center justify-center gap-4">
-							<div className="w-full px-4">
-								{audioURL ? (
-									<div>
-										<audio
-											ref={playerRef}
-											onPlay={handlePlay}
-											onPause={handlePause}
-											onEnded={handlePause}
-											controls
-											src={audioURL}
-											className="w-full"
-										></audio>
-									</div>
-								) : (
-									<button
-										onClick={isRecording ? handleStop : handleStart}
-										className="group relative flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border-t border-l border-white/60 bg-transparent from-gray-950/10 to-gray-950/0 py-2 px-4 font-mono text-sm font-medium text-gray-950/70 ring ring-gray-950 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:border-gray-950/30 active:bg-gradient-to-br"
-									>
-										<span className="pointer-events-none absolute inset-0 rounded-full border-r border-b border-gray-950/50" />
-										<span
-											className={clsx(
-												'relative block h-2 w-2 rounded-full',
-												isRecording ? 'bg-red-400' : 'bg-red-800',
-											)}
-										>
-											{isRecording ? (
-												<>
-													<span className="absolute inset-0 bg-red-400 blur-sm" />
-													<span className="bg-recording absolute inset-0 rounded-full" />
-												</>
-											) : null}
-										</span>
-										{isRecording ? 'Stop Recording' : 'Start Recording'}
-									</button>
-								)}
-							</div>
-							<Form
-								encType="multipart/form-data"
-								className="flex w-full max-w-sm flex-col gap-4"
+					<div className="relative flex flex-1 justify-between pb-4">
+						<div className="flex flex-col justify-between px-4">
+							<button className="group relative flex h-6 w-6 cursor-pointer items-center justify-center gap-2 rounded-full border-t border-l border-white/60 bg-transparent from-gray-950/10 to-gray-950/0 font-mono text-sm font-medium text-gray-950/70 ring ring-gray-950 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:border-gray-950/30 active:bg-gradient-to-br">
+								<ArrowPathIcon className="h-3 w-3" />
+							</button>
+							<button
+								onClick={audioURL ? handleReset : handleStop}
+								className="group relative flex h-6 w-6 cursor-pointer items-center justify-center gap-2 rounded-full border-t border-l border-white/60 bg-transparent from-gray-950/10 to-gray-950/0 font-mono text-sm font-medium text-gray-950/70 ring ring-gray-950 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:border-gray-950/30 active:bg-gradient-to-br"
 							>
-								<input
-									ref={fileInputRef}
-									type="file"
-									name="recording"
-									accept="audio/*"
-									onChange={handleFileChange}
-									className={audioURL ? 'sr-only' : 'sr-only'}
-								/>
-								{audioURL ? (
-									<>
-										<button
-											type="submit"
-											className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full border border-transparent py-2 px-4 font-medium"
-										>
-											Save and Make Magic
-										</button>
-										<button
-											onClick={() => {
-												if (playerRef.current) {
-													playerRef.current.pause()
-													handlePause()
-												}
-												handleReset()
-											}}
-											type="button"
-											className="hover:bg-foreground/10 border-foreground group flex w-full items-center justify-center gap-2 rounded-full border bg-transparent py-2 px-4 font-medium"
-										>
-											Clear Audio
-										</button>
-									</>
-								) : null}
-							</Form>
+								<AdjustmentsHorizontalIcon className="h-3 w-3" />
+							</button>
 						</div>
+						<div className="flex items-center justify-end gap-4 pr-12">
+							<div className="relative isolate translate-y-5 rounded-lg">
+								<button
+									disabled={isRecording}
+									onClick={
+										audioURL
+											? audioPlaying
+												? pauseAudio
+												: playAudio
+											: handleStart
+									}
+									className="peer group relative isolate z-10 flex h-16 w-16 cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 font-mono text-sm font-medium text-orange-950/70 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:bg-gradient-to-br"
+								>
+									<span className="absolute inset-0 rounded-lg border-t-2 border-l-2 border-white/60 blur-[2px] group-active:border-white/20" />
+									<span className="absolute inset-0 rounded-lg border-t border-l border-white/60 blur-[1px] group-active:border-white/20" />
+									<span className="absolute inset-0 rounded-lg border-r-2 border-b-2 border-gray-950/60 blur-[3px] group-active:border-gray-950/80" />
+									<span className="absolute inset-0 rounded-lg border-r border-b border-gray-950/50 blur-[2px] group-active:border-gray-950/80" />
+									<div className="absolute inset-2 rounded-full bg-gradient-to-br from-orange-500 via-orange-500 to-orange-200/30" />
+									<div className="absolute inset-[9px] rounded-full bg-orange-600" />
+									<CircleSymbol className="relative h-4 w-4 text-orange-50/80" />
+									<div className="absolute inset-[9px] rounded-full bg-gradient-to-br from-orange-50/0 to-orange-200/60" />
+									<div className="absolute inset-[9px] rounded-full bg-gradient-to-br from-orange-700/20 to-orange-600/0" />
+									<div className="absolute inset-2 rounded-full border border-orange-200 blur-[2px]" />
+									<div className="absolute inset-2 rounded-full bg-orange-950 opacity-0 blur-sm group-active:opacity-5" />
+									<div className="absolute inset-0 top-1/2 left-1/2 z-[-1] bg-gray-950/30 blur group-active:bg-gray-950/50" />
+								</button>
+								<div className="absolute -inset-[3px] z-[-2] rounded-xl bg-gradient-to-br from-gray-800 to-gray-200" />
+								<div className="absolute -inset-[3px] z-[-2] rounded-xl bg-gradient-to-br from-orange-500/50 via-gray-950/50 to-gray-200" />
+								<div className="absolute -inset-0.5 rounded-[11px] bg-gray-950" />
+								<div className="absolute inset-0 z-[-1] translate-2 bg-gray-950/30 blur peer-active:bg-gray-950/10" />
+								<div className="absolute inset-0 z-[-1] translate-1 bg-gray-950/30 blur-sm peer-active:bg-gray-950/10" />
+							</div>
+							<div className="relative isolate -translate-y-5 rounded-lg">
+								<button
+									disabled={!audioURL && !isRecording}
+									onClick={audioURL ? handleReset : handleStop}
+									className="peer group relative z-10 flex h-16 w-16 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 font-mono text-sm font-medium text-gray-950/70 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)] active:bg-gradient-to-br"
+								>
+									<span className="absolute inset-0 rounded-lg border-t-2 border-l-2 border-white/60 blur-[3px] group-active:border-white/20" />
+									<span className="absolute inset-0 rounded-lg border-t border-l border-white/60 blur-[2px] group-active:border-white/20" />
+									<span className="absolute inset-0 rounded-lg border-r-2 border-b-2 border-gray-950/60 blur-[3px] group-active:border-gray-950/80" />
+									<span className="absolute inset-0 rounded-lg border-r border-b border-gray-950/50 blur-[2px] group-active:border-gray-950/80" />
+
+									<div className="absolute inset-2 rounded-full bg-gradient-to-br from-gray-600 via-gray-600 to-gray-200/30" />
+									<div className="absolute inset-[9px] rounded-full bg-gray-700" />
+									<XSymbol className="relative h-4 w-4 text-orange-50/80" />
+									<div className="absolute inset-[9px] rounded-full bg-gradient-to-br from-gray-800/20 to-gray-700/0" />
+									<div className="absolute inset-[9px] rounded-full bg-gradient-to-br from-gray-50/0 to-gray-400/60" />
+									<div className="absolute inset-2 rounded-full border border-gray-300 blur-[2px]" />
+									<div className="absolute inset-2 bg-gray-950 opacity-0 blur-sm group-active:opacity-5" />
+									<div className="absolute inset-0 top-1/2 left-1/2 z-[-1] bg-gray-950/40 blur group-active:bg-gray-950/60" />
+								</button>
+								<div className="absolute -inset-[3px] z-[-2] rounded-xl bg-gradient-to-br from-gray-800 to-gray-200" />
+								<div className="absolute -inset-0.5 rounded-[11px] bg-gray-950" />
+								<div className="absolute inset-0 z-[-1] translate-2 bg-gray-950/30 blur peer-active:bg-gray-950/20" />
+								<div className="absolute inset-0 z-[-1] translate-1 bg-gray-950/30 blur-sm peer-active:bg-gray-950/20" />
+							</div>
+						</div>
+						<div className="absolute top-2 left-12 h-28 w-28">
+							<div className="absolute -inset-px rounded-full bg-gradient-to-br from-gray-600 to-white" />
+							<div className="absolute -inset-px rounded-full bg-gradient-to-br from-orange-700/50 via-gray-600/20 to-white" />
+							<div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-200" />
+							<div className="absolute inset-2 rounded-full bg-gradient-to-r from-gray-700 to-gray-100" />
+							<div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-600/50 via-gray-400/50 to-gray-200" />
+							<div className="absolute inset-2 rounded-full bg-gradient-to-r from-gray-700 to-gray-100" />
+							<div className="absolute inset-2 rounded-full bg-gradient-to-r from-orange-400/70 via-orange-300/50 to-orange-100" />
+							<div className="absolute inset-[9px] rounded-full bg-gradient-to-br from-gray-800 to-gray-950" />
+							<div className="absolute inset-[11px] rounded-full bg-gradient-to-br from-orange-50 via-orange-400 to-orange-800" />
+							<div className="absolute inset-3 rounded-full bg-gradient-to-br from-orange-300 to-orange-500" />
+							<div className="absolute inset-4 rounded-full bg-gradient-to-br from-orange-600 via-orange-300 to-orange-100" />
+							<div className="absolute inset-[17px] rounded-full bg-orange-600" />
+							<div className="absolute inset-0">
+								<div className="absolute bottom-8 left-8 h-2 w-2 rounded-full">
+									<div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-800 via-orange-700/20 to-orange-700/0" />
+									<div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/0 via-white/20 to-white/30" />
+									<div className="absolute inset-px rounded-full bg-gradient-to-br from-orange-400 to-orange-200" />
+								</div>
+							</div>
+							<div className="absolute inset-[17px] rounded-full bg-gradient-to-br from-orange-50/0 to-orange-50/60" />
+						</div>
+						<Form encType="multipart/form-data" className="sr-only">
+							{audioURL ? (
+								<audio
+									ref={playerRef}
+									onPlay={handlePlay}
+									onPause={handlePause}
+									onEnded={handlePause}
+									controls
+									src={audioURL}
+									className="w-full"
+								></audio>
+							) : null}
+							<input
+								ref={fileInputRef}
+								type="file"
+								name="recording"
+								accept="audio/*"
+								onChange={handleFileChange}
+								className={audioURL ? 'sr-only' : 'sr-only'}
+							/>
+							{audioURL ? (
+								<>
+									<button
+										type="submit"
+										className="bg-foreground hover:bg-foreground/90 group text-background flex w-full items-center justify-center gap-2 rounded-full border border-transparent py-2 px-4 font-medium"
+									>
+										Save and Make Magic
+									</button>
+									<button
+										onClick={() => {
+											if (playerRef.current) {
+												playerRef.current.pause()
+												handlePause()
+											}
+											handleReset()
+										}}
+										type="button"
+										className="hover:bg-foreground/10 border-foreground group flex w-full items-center justify-center gap-2 rounded-full border bg-transparent py-2 px-4 font-medium"
+									>
+										Clear Audio
+									</button>
+								</>
+							) : null}
+						</Form>
 					</div>
 					<div className="relative rounded-t-sm border-t-2 border-gray-950/60">
-						<div className="flex items-center justify-between rounded-t-sm border-t-2 border-white/40 py-4 px-8 font-mono">
-							<p className="text-xs text-gray-950/70 [text-shadow:0_1px_color-mix(in_srgb,var(--color-white)_50%,transparent)]">
-								Audio Visualizer II
-							</p>
-							<span className="relative isolate block h-2 w-2 rounded-full bg-emerald-800">
-								{isOn ? (
-									<>
-										<span className="absolute inset-0 bg-emerald-400 blur-sm" />
-										<span className="bg-power-on absolute inset-0 rounded-full" />
-									</>
-								) : null}
-							</span>
+						<div className="flex items-center justify-between rounded-t-sm border-t-2 border-white/40 font-mono">
+							<svg
+								width="440"
+								height="48"
+								className="py-1 pl-2"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<defs>
+									<linearGradient
+										id="hole-highlight"
+										x1="1.5"
+										y1="1.5"
+										x2="6.5"
+										y2="6.5"
+										gradientUnits="userSpaceOnUse"
+									>
+										<stop stopColor="#374151" />
+										<stop offset="1" stopColor="#f3f4f6" />
+									</linearGradient>
+
+									<linearGradient
+										id="hole"
+										x1="4"
+										y1="1"
+										x2="4"
+										y2="7"
+										gradientUnits="userSpaceOnUse"
+									>
+										<stop stopColor="#030712" />
+										<stop offset="1" stopColor="#4b5563" />
+									</linearGradient>
+									<pattern
+										id="myPattern"
+										patternUnits="userSpaceOnUse"
+										width="8"
+										height="8"
+									>
+										<circle cx="4" cy="4" r="3.5" fill="url(#hole-highlight)" />
+										<circle cx="4" cy="4" r="3" fill="url(#hole)" />
+									</pattern>
+								</defs>
+								<rect width="8" height="24" fill="url(#myPattern)" />
+								<rect width="8" height="32" x="8" fill="url(#myPattern)" />
+								<rect width="400" height="40" x="16" fill="url(#myPattern)" />
+								<rect width="8" height="32" x="416" fill="url(#myPattern)" />
+								<rect width="8" height="24" x="424" fill="url(#myPattern)" />
+							</svg>
 						</div>
 					</div>
 					<div className="pointer-events-none absolute inset-0 rounded-4xl border-r-2 border-b-2 border-white/20" />
@@ -267,10 +412,10 @@ export default function Screen() {
 				</div>
 				<div className="bg-device-bottom absolute top-full right-0 left-0 z-[-3] mx-auto h-[60px] max-w-md -translate-y-8 overflow-hidden rounded-t-none rounded-b-4xl border-b border-white/50 bg-gray-500">
 					<div className="absolute inset-0 mix-blend-multiply filter-[url(#noise)]" />
-					<div className="absolute right-[47px] bottom-[7px] h-[9px] w-[26px] rounded-full bg-gradient-to-t from-white/70 via-white/20 via-20% to-white/0" />
+					<div className="absolute right-[55px] bottom-[7px] h-[9px] w-[34px] rounded-full bg-gradient-to-t from-white/70 via-white/20 via-20% to-white/0" />
 					<button
 						onClick={() => setIsOn((prev) => !prev)}
-						className="switch-inset absolute right-12 bottom-2 h-2 w-8 cursor-grab rounded bg-gray-700 active:cursor-grabbing"
+						className="switch-inset absolute right-14 bottom-2 h-2 w-8 cursor-grab rounded bg-gray-700 active:cursor-grabbing"
 					>
 						<span className="absolute inset-x-0 top-0 h-4 overflow-hidden rounded-t">
 							<span
@@ -285,6 +430,15 @@ export default function Screen() {
 						<span className="absolute -inset-2" />
 						<span className="sr-only">{isOn ? 'Turn off' : 'Turn on'}</span>
 					</button>
+
+					<span className="absolute right-10 bottom-2.5 isolate block h-1 w-2 rounded-[100%] bg-emerald-950">
+						{isOn ? (
+							<>
+								<span className="absolute inset-0 bg-emerald-400 blur-sm" />
+								<span className="bg-power-on absolute inset-0 rounded-[100%]" />
+							</>
+						) : null}
+					</span>
 				</div>
 				<div className="absolute inset-x-0 top-full z-[-4] h-6 translate-y-[460%] rounded-[50%] bg-gray-950/40 blur-lg" />
 				<div className="absolute -inset-x-16 top-full z-[-4] h-16 translate-y-[160%] rounded-[50%] bg-gray-950/40 blur-2xl" />
@@ -323,6 +477,24 @@ function createDot(point: Point3D, theta: number, phi: number): Dot {
 		theta,
 		phi,
 	}
+}
+
+const colors = [
+	'#fff7ed',
+	'#ffedd5',
+	'#fed7aa',
+	'#fdba74',
+	'#fb923c',
+	'#f97316',
+]
+
+/**
+ * Simplex Noise generates a value between -1 and 1, but we are working with an
+ * array that will not accept a negative index. We will be converting the original
+ * noise range to fit the 0 to 1 scale we need.
+ **/
+function getColorByNoise(noise: number) {
+	return colors[Math.floor(((noise + 1) / 2) * colors.length)] ?? colors[0]!
 }
 
 function orb({
@@ -377,14 +549,15 @@ function orb({
 	// Draw the dot on the canvas
 	function draw(
 		dot: Dot,
-		options: { sin: number; cos: number; radius: number },
+		options: { sin: number; cos: number; radius: number; color: string },
 	): void {
 		const { x, y, size } = project(dot, options)
 
 		ctx.beginPath()
 		ctx.arc(x, y, options.radius * size, 0, Math.PI * 2)
 		ctx.closePath()
-		ctx.fillStyle = `rgba(255, 255, 255, ${size})`
+		ctx.globalAlpha = size
+		ctx.fillStyle = options.color
 		ctx.fill()
 	}
 
@@ -451,6 +624,8 @@ function orb({
 				time * 0.001,
 			)
 
+			const color = getColorByNoise(noiseValue)
+
 			// Update dot's position using the audio-influenced radius
 			const animatedRadius = isActive
 				? Math.min(
@@ -471,6 +646,7 @@ function orb({
 				sin: sineRotation,
 				cos: cosineRotation,
 				radius: isActive ? MAX_DOT_RADIUS : MIN_DOT_RADIUS,
+				color,
 			})
 		})
 		window.requestAnimationFrame(render)
@@ -481,4 +657,44 @@ function orb({
 
 	// Render the scene
 	window.requestAnimationFrame(render)
+}
+
+function CircleSymbol({ className }: { className?: string }) {
+	return (
+		<svg
+			width="8"
+			height="8"
+			viewBox="0 0 8 8"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className={className}
+		>
+			<path
+				fillRule="evenodd"
+				clipRule="evenodd"
+				d="M2 0H3H4H5H6V1H5H4H3H2V0ZM1 2V1H2V2H1ZM1 6H0V5V4V3V2H1V3V4V5V6ZM2 7H1V6H2V7ZM5 7H4H3H2V8H3H4H5H6V7H7V6H8V5V4V3V2H7V1H6V2H7V3V4V5V6H6V7H5Z"
+				fill="currentColor"
+			/>
+		</svg>
+	)
+}
+
+function XSymbol({ className }: { className?: string }) {
+	return (
+		<svg
+			width="8"
+			height="8"
+			viewBox="0 0 8 8"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className={className}
+		>
+			<path
+				fillRule="evenodd"
+				clipRule="evenodd"
+				d="M0 0H1V1H0V0ZM2 2H1V1H2V2ZM3 3H2V2H3V3ZM5 3H4H3V4V5H2V6H1V7H0V8H1V7H2V6H3V5H4H5V6H6V7H7V8H8V7H7V6H6V5H5V4V3ZM6 2V3H5V2H6ZM7 1V2H6V1H7ZM7 1V0H8V1H7Z"
+				fill="currentColor"
+			/>
+		</svg>
+	)
 }

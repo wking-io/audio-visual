@@ -4,6 +4,7 @@ import {
 } from '@remix-run/dev'
 import tailwindcss from '@tailwindcss/vite'
 import morgan from 'morgan'
+import { remixDevTools } from 'remix-development-tools'
 import { flatRoutes } from 'remix-flat-routes'
 import { type ViteDevServer, defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
@@ -16,6 +17,7 @@ export default defineConfig({
 		morganPlugin(),
 		tailwindcss(),
 		remixCloudflareDevProxy(),
+		remixDevTools(),
 		remix({
 			routes: async (defineRoutes) => {
 				return flatRoutes('routes', defineRoutes, {

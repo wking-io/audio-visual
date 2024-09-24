@@ -63,6 +63,7 @@ export function useRecordAudio({
 	}
 
 	function handleReset() {
+		onStop?.()
 		mediaRecorderRef.current?.stop()
 		mediaRecorderRef.current = null
 		setIsRecording(false)

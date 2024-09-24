@@ -1,15 +1,10 @@
-import { Transition } from '@headlessui/react'
-import {
-	AdjustmentsHorizontalIcon,
-	ArrowPathIcon,
-} from '@heroicons/react/20/solid'
 import { type FileUpload, parseFormData } from '@mjackson/form-data-parser'
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare'
 import { useFetcher } from '@remix-run/react'
 import clsx from 'clsx'
 import { drizzle } from 'drizzle-orm/d1'
 import {
-	Fragment,
+	forwardRef,
 	type PropsWithChildren,
 	type ReactEventHandler,
 	useCallback,
@@ -162,9 +157,7 @@ export default function Screen() {
 		<Device>
 			<DeviceFace>
 				<DeviceScreen isOn={isOn}>
-					<div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-gray-950/60">
-						<canvas ref={canvasRef} width={300} height={300} />
-					</div>
+					<RecordingCanvas ref={canvasRef} />
 					{/* Top status bar */}
 					<div className="absolute inset-x-1 top-1 flex justify-between gap-4 overflow-hidden rounded-t-[10px] border-b border-dashed border-gray-100/60 font-mono text-[10px] text-gray-100/80">
 						<div className="flex">
@@ -907,3 +900,9 @@ function PrimaryButtons({ children }: PropsWithChildren) {
 		<div className="flex items-center justify-end gap-4 pr-12">{children}</div>
 	)
 }
+
+const RecordingCanvas = forwardRef<HTMLCanvasElement, {}>((_, ref) => (
+	<div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-gray-950/60">
+		<canvas ref={ref} width={300} height={300} />
+	</div>
+))

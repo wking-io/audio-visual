@@ -1,6 +1,5 @@
 import { type FileUpload, parseFormData } from '@mjackson/form-data-parser'
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare'
-import { useFetcher } from '@remix-run/react'
 import clsx from 'clsx'
 import { drizzle } from 'drizzle-orm/d1'
 import {
@@ -80,10 +79,9 @@ export default function Screen() {
 		dataArray: Uint8Array | null
 		isActive: boolean
 	}>({ analyser: null, dataArray: null, isActive: false })
-	const [isOn, setIsOn] = useState(false)
+	const [isOn, setIsOn] = useState(true)
 	const [audioPlaying, setAudioPlaying] = useState(false)
-	const fetcher = useFetcher({ key: 'create-recording' })
-	const [mode, setMode] = useState<'record' | 'generate'>('record')
+	const [mode, setMode] = useState<'record' | 'generate'>('generate')
 	const { handleSetup, handleSuspend, handleTearDown } = useAudioAnalyser({
 		onSetup(analyser) {
 			// Set analyser instance
@@ -157,9 +155,46 @@ export default function Screen() {
 		<Device>
 			<DeviceFace>
 				<DeviceScreen isOn={isOn}>
-					<RecordingCanvas ref={canvasRef} />
-					{/* Top status bar */}
-					<div className="absolute inset-x-1 top-1 flex justify-between gap-4 overflow-hidden rounded-t-[10px] border-b border-dashed border-gray-100/60 font-mono text-[10px] text-gray-100/80">
+					{mode === 'record' ? (
+						<RecordingCanvas ref={canvasRef} />
+					) : (
+						<div className="flex h-full w-full items-center justify-center">
+							<div className="absolute top-1/2 left-1/2 aspect-[16/7] w-2/3 -translate-1/2">
+								{COLORS.map((color, i) => (
+									<Blob
+										index={i}
+										seed={Math.random()}
+										color={color}
+										key={color}
+										className="scale-125 opacity-50 blur-xl"
+									/>
+								))}
+							</div>
+							<div className="absolute top-1/2 left-1/2 aspect-[16/7] w-[69%] -translate-1/2 overflow-hidden blur">
+								{COLORS.map((color, i) => (
+									<Blob
+										index={i}
+										seed={Math.random()}
+										color={color}
+										key={color}
+										className="blur-sm"
+									/>
+								))}
+							</div>
+							<div className="relative aspect-[16/7] w-2/3 overflow-hidden">
+								{COLORS.map((color, i) => (
+									<Blob
+										index={i}
+										seed={Math.random()}
+										color={color}
+										key={color}
+										className="blur-[3px]"
+									/>
+								))}
+							</div>
+						</div>
+					)}
+					<TopStatusBar>
 						<div className="flex">
 							<p
 								className={clsx(
@@ -196,9 +231,8 @@ export default function Screen() {
 								Menu
 							</p>
 						</div>
-					</div>
-					{/* Bottom status bar */}
-					<div className="absolute inset-x-1 bottom-1 flex gap-4 rounded-b-[11px] border-t border-dashed border-gray-100/60 py-2 px-3 font-mono text-[10px] text-gray-100/80">
+					</TopStatusBar>
+					<BottomStatusBar>
 						{audioURL ? (
 							<>
 								<p className="inline-flex items-center gap-1.5">
@@ -230,7 +264,7 @@ export default function Screen() {
 								</p>
 							</>
 						)}
-					</div>
+					</BottomStatusBar>
 				</DeviceScreen>
 				<DeviceControls>
 					<TertiaryButtons>
@@ -708,7 +742,7 @@ function XButton({
 
 function DialButton() {
 	return (
-		<div className="absolute top-0 left-12 h-32 w-32">
+		<div className="absolute top-1/2 left-12 h-32 w-32 -translate-y-1/2">
 			<div className="absolute -inset-px rounded-full bg-gradient-to-br from-gray-600 to-white" />
 			<div className="absolute -inset-px rounded-full bg-gradient-to-br from-orange-700/50 via-gray-600/20 to-white" />
 			<div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-200" />
@@ -764,7 +798,7 @@ function Device({ children }: PropsWithChildren) {
 
 function DeviceFace({ children }: PropsWithChildren) {
 	return (
-		<div className="relative flex aspect-[6/7] w-full flex-col overflow-hidden rounded-4xl bg-gray-300 bg-gradient-to-br from-gray-950/0 via-gray-950/30 via-80% to-gray-950/35">
+		<div className="relative flex aspect-[9/11] w-full flex-col overflow-hidden rounded-4xl bg-gray-300 bg-gradient-to-br from-gray-950/0 via-gray-950/30 via-80% to-gray-950/35">
 			<div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-white/10 to-white/0 to-50%" />
 			<div className="pointer-events-none absolute inset-0 mix-blend-multiply filter-[url(#noise)]" />
 			{children}
@@ -843,13 +877,13 @@ function DeviceScreen({
 					<div
 						className={clsx(
 							isOn ? 'scale-y-100' : 'scale-y-0 delay-100',
-							'bg-white/5 transition duration-200',
+							'h-full w-full bg-white/5 transition duration-200',
 						)}
 					>
 						<div
 							className={clsx(
 								isOn ? 'opacity-100 delay-100' : 'opacity-0',
-								'transition duration-200',
+								'h-full w-full transition duration-200',
 							)}
 						>
 							{children}
@@ -865,7 +899,7 @@ function DeviceScreen({
 
 function DeviceControls({ children }: PropsWithChildren) {
 	return (
-		<div className="relative flex flex-1 justify-between pb-4">{children}</div>
+		<div className="relative mb-4 flex flex-1 justify-between">{children}</div>
 	)
 }
 
@@ -906,3 +940,179 @@ const RecordingCanvas = forwardRef<HTMLCanvasElement, {}>((_, ref) => (
 		<canvas ref={ref} width={300} height={300} />
 	</div>
 ))
+
+function TopStatusBar({ children }: PropsWithChildren) {
+	return (
+		<div className="absolute inset-x-1 top-1 flex justify-between gap-4 overflow-hidden rounded-t-[10px] border-b border-dashed border-gray-100/60 font-mono text-[10px] text-gray-100/80">
+			{children}
+		</div>
+	)
+}
+
+function BottomStatusBar({ children }: PropsWithChildren) {
+	return (
+		<div className="absolute inset-x-1 bottom-1 flex gap-4 rounded-b-[11px] border-t border-dashed border-gray-100/60 py-2 px-3 font-mono text-[10px] text-gray-100/80">
+			{children}
+		</div>
+	)
+}
+/**
+ * Blob generator
+ */
+function blobGenerator({
+	size = 400,
+	edges = 6,
+	seed,
+}: {
+	size?: number
+	edges?: number
+	seed?: number
+}) {
+	var { destPoints, seedValue } = createPoints({ size, edges, seed })
+	var path = createSvgPath(destPoints)
+	return { path, seedValue }
+}
+
+const createPoints = ({
+	size,
+	edges,
+	seed,
+}: {
+	size: number
+	edges: number
+	seed?: number
+}) => {
+	let seedValue = seed ?? Math.random()
+	const growth = randomFloatBetween(0, 0.5, seedValue)
+	const origin = size / 2
+	let outerRad = origin
+	let innerRad = origin - origin * growth
+
+	let slices = divide(edges)
+	let destPoints: [number, number][] = []
+
+	slices.forEach((degree) => {
+		let O = randomFloatBetween(innerRad, outerRad, Math.random())
+		console.log('DATA: ', innerRad, outerRad, O)
+		let end = point({ origin, radius: O, degree })
+		destPoints.push(end)
+	})
+	return { destPoints, seedValue }
+}
+
+function createSvgPath(points: [number, number][]) {
+	let svgPath = ''
+	var mid = [
+		(points[0]![0] + points[1]![0]) / 2,
+		(points[0]![1] + points[1]![1]) / 2,
+	]
+	svgPath += 'M' + mid[0] + ',' + mid[1]
+
+	for (var i = 0; i < points.length; i++) {
+		var p1 = points[(i + 1) % points.length]!
+		var p2 = points[(i + 2) % points.length]!
+		mid = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
+		svgPath += 'Q' + p1[0] + ',' + p1[1] + ',' + mid[0] + ',' + mid[1]
+	}
+	svgPath += 'Z'
+	return svgPath
+}
+
+function toRad(deg: number) {
+	return deg * (Math.PI / 180.0)
+}
+
+function divide(count: number) {
+	var deg = 360 / count
+
+	return Array(count)
+		.fill('a')
+		.map((_, i) => i * deg)
+}
+
+function point({
+	origin,
+	radius,
+	degree,
+}: {
+	origin: number
+	radius: number
+	degree: number
+}): [number, number] {
+	var x = origin + radius * Math.cos(toRad(degree))
+	var y = origin + radius * Math.sin(toRad(degree))
+	return [Math.round(x), Math.round(y)]
+}
+
+function shuffle<T>(array: T[]) {
+	array.sort(() => Math.random() - 0.5)
+	return array
+}
+
+function randomFloatBetween(min: number, max: number, seed: number): number {
+	return min + seed * (max - min)
+}
+
+function randomIntBetween(min: number, max: number, seed: number): number {
+	return Math.floor(randomFloatBetween(min, max, seed))
+}
+
+export type Seed = number
+
+const CANVAS_WIDTH = 124
+const CANVAS_HEIGHT = 124
+
+const COLORS = [
+	'#3479F6',
+	'#34BF96',
+	'#EFBD2D',
+	'#97DC42',
+	'#F28F47',
+	'#7863F9',
+	'#FF77DD',
+]
+
+const POSITIONS = [
+	'-left-5 -top-3',
+	'left-1/4 -top-6',
+	'-right-7 -top-8',
+	'-bottom-2 -left-5',
+	'-bottom-10 left-1/4',
+	'bottom-2 right-6',
+	'-bottom-6 -right-8',
+]
+type BaseProps = {
+	seed: Seed
+	color: string
+	index: number
+	className?: string
+}
+
+function Blob({ seed, color, className, index }: BaseProps) {
+	const edges = randomIntBetween(8, 36, seed)
+	const blob = blobGenerator({
+		size: randomFloatBetween(92, 108, seed),
+		edges,
+	})
+	return (
+		<svg
+			id="craft-lab-logo"
+			viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+			width={CANVAS_WIDTH}
+			height={CANVAS_HEIGHT}
+			xmlns="http://www.w3.org/2000/svg"
+			className={clsx(
+				className,
+				POSITIONS[index] ?? POSITIONS[0]!,
+				'absolute isolate',
+			)}
+		>
+			<path
+				d={blob.path}
+				key={color}
+				fill={color}
+				className="mix-blend-screen"
+			/>
+		</svg>
+	)
+}
